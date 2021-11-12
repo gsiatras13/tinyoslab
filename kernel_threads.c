@@ -2,7 +2,10 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
+#include "kernel_threads.h"
 
+
+PTCB PTT[MAX_PROC];
 /** 
   @brief Create a new thread in the current process.
   */

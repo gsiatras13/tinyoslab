@@ -18,6 +18,7 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 
+
 /**
   @brief PID state
 
@@ -66,8 +67,8 @@ typedef struct process_control_block {
                                           ||
                                           \/   */
 
-  rlnode ptcb_list;       /**< @bried List of ptcb's */
-  int thread_count;
+  rlnode ptcb_list;       /**< @brief List of ptcb's running*/
+  int thread_count;       /**< @brief number of ptcb's running*/
                              
                              
 

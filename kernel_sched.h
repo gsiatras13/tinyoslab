@@ -24,6 +24,7 @@
 #include "tinyos.h"
 #include "util.h"
 
+
 /*****************************
  *
  *  The Thread Control Block
@@ -101,6 +102,8 @@ typedef struct thread_control_block {
 
 	PCB* owner_pcb; /**< @brief This is null for a free TCB */
 
+  PTCB* ptcb;     
+
 	cpu_context_t context; /**< @brief The thread context */
 	Thread_type type; /**< @brief The type of thread */
 	Thread_state state; /**< @brief The state of the thread */
@@ -129,6 +132,10 @@ typedef struct thread_control_block {
 #endif
 
 } TCB;
+
+
+
+
 
 /** @brief Thread stack size.
 
