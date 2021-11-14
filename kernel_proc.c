@@ -3,7 +3,7 @@
 #include "kernel_cc.h"
 #include "kernel_proc.h"
 #include "kernel_streams.h"
-
+/*testgittest*/
 
 /* 
  The process table and related system calls:
@@ -79,7 +79,7 @@ void initialize_processes()
 /* Add a ptcb to pcb's ptcb list */
 void add_ptcb(PCB* pcb, PTCB* ptcb){
 
-rlist_push_front(& pcb->ptcb_list, ptcb);
+rlist_push_front(& pcb->ptcb_list,& ptcb);
 pcb->thread_count ++;
 
 }
