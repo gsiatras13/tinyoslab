@@ -5,6 +5,7 @@
 
 #define CURCORE (cctx[cpu_core_id])
 #define CURTHREAD (CURCORE.current_thread)
+#define CURPROC
 
 
 
@@ -28,7 +29,7 @@ void start_thread(){
   */
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
-  PCB* pcb;
+  
 
    
 
@@ -55,7 +56,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
   if(task != NULL){
     /** Initialize a new tcb*/
-    ptcb->tcb = spawn_thread(pcb, ptcb, start_thread);
+    ptcb->tcb = spawn_thread(CURPROC, ptcb, start_thread);
     ptcb->refcount = 1;
     /** Wake up tcb (add to sched) */
     wakeup(ptcb->tcb);
