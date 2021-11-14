@@ -14,20 +14,20 @@
 
 
 typedef struct process_thread_control_block {
-  TCB* tcb;
+  TCB* tcb;                      /** Connected tcb */
 
 
-  Task task;
-  int argl;
+  Task task;                     /** Task to be executed */
+  int argl;                      
   void* args;
 
   int exitval;
 
-  int exited;
-  int detached;
+  int exited;                    /** Flag (1 = exited) */
+  int detached;                  
   CondVar exit_cv;
 
-  int refcount;
+  int refcount;                  /** Flag to know when to erase ptcb */
 
   rlnode ptcb_list_node;
                              

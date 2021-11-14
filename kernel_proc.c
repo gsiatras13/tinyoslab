@@ -43,7 +43,10 @@ static inline void initialize_PCB(PCB* pcb)
   rlnode_init(& pcb->exited_list, NULL);
   rlnode_init(& pcb->children_node, pcb);
   rlnode_init(& pcb->exited_node, pcb);
+  rlnode_init(& pcb->ptcb_list, NULL);           /** Initialization of ptcb list */
   pcb->child_exit = COND_INIT;
+  pcb->thread_count = 0;                         /** Initialization of thread_list*/
+
 }
 
 
@@ -70,6 +73,15 @@ void initialize_processes()
   /* Execute a null "idle" process */
   if(Exec(NULL,0,NULL)!=0)
     FATAL("The scheduler process does not have pid==0");
+}
+
+
+/* Add a ptcb to pcb's ptcb list */
+void add_ptcb(PCB* pcb, PTCB* ptcb){
+
+rlist_push_front(& pcb->ptcb_list, ptcb);
+pcb->thread_count ++;
+
 }
 
 
@@ -131,6 +143,7 @@ void start_main_thread()
 Pid_t sys_Exec(Task call, int argl, void* args)
 {
   PCB *curproc, *newproc;
+  PTCB* ptcb;
   
   /* The new process PCB */
   newproc = acquire_PCB();
@@ -178,8 +191,10 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     the initialization of the PCB.
    */
   if(call != NULL) {
-    newproc->main_thread = spawn_thread(newproc, start_main_thread);
-    wakeup(newproc->main_thread);
+    newproc->main_thread = spawn_thread(newproc, NULL, start_main_thread);
+    ptcb = CreateThread(call, args, argl);
+    add_ptcb(newproc, ptcb);
+    
   }
 
 
