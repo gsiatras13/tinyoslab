@@ -119,16 +119,4 @@ void sys_ThreadExit(int exitval)
 }
 
 
-int sys_ThreadDetach(Tid_t tid)
-{
-	return -1;
-}
-
-/**
-  @brief Terminate the current thread.
-  */
-void sys_ThreadExit(int exitval)
-{
-
-}
 
