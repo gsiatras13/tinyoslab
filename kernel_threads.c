@@ -1,4 +1,3 @@
-
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
@@ -6,6 +5,8 @@
 
 #define CURCORE (cctx[cpu_core_id])
 #define CURTHREAD (CURCORE.current_thread)
+
+
 
 
 
@@ -29,7 +30,11 @@ void start_thread(){
   */
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
+
   PCB* pcb;
+
+  
+
 
    
 
@@ -52,14 +57,25 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   ptcb->exited = 0;
   ptcb->detached = 0;
 
+  ptcb->exit_cv = COND_INIT;
+
+
   
 
   if(task != NULL){
     /** Initialize a new tcb*/
-    ptcb->tcb = spawn_thread(pcb, ptcb, start_thread);
+
+        ptcb->tcb = spawn_thread(CURPROC, ptcb, start_thread);
+    /* PCB* pcb = ptcb->tcb->owner_pcb;
+       rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
+       rlist_push_front(& pcb->ptcb_list, node);
+       ptcb->refcount++;
+       pcb->thread_count++;
+    */s
     ptcb->refcount = 1;
     /** Wake up tcb (add to sched) */
     wakeup(ptcb->tcb);
+
 }
 
 
@@ -67,6 +83,11 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 }
 
 
+
+
+
+
+>>>>>>> b3fb0920b1b7a91b260f16a85d09317a9bdde83c
 
 /**
   @brief Return the Tid of the current thread.
@@ -110,4 +131,6 @@ void sys_ThreadExit(int exitval)
 {
 
 }
+
+
 

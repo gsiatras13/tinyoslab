@@ -143,7 +143,12 @@ void start_main_thread()
 Pid_t sys_Exec(Task call, int argl, void* args)
 {
   PCB *curproc, *newproc;
+<<<<<<< HEAD
   PTCB* ptcb;
+=======
+  PTCB *ptcb;	
+	
+>>>>>>> b3fb0920b1b7a91b260f16a85d09317a9bdde83c
   
   /* The new process PCB */
   newproc = acquire_PCB();
@@ -191,10 +196,12 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     the initialization of the PCB.
    */
   if(call != NULL) {
+
     newproc->main_thread = spawn_thread(newproc, NULL, start_main_thread);
     ptcb = CreateThread(call, args, argl);
     add_ptcb(newproc, ptcb);
     
+
   }
 
 
