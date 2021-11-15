@@ -3,6 +3,7 @@
 #include "kernel_cc.h"
 #include "kernel_proc.h"
 #include "kernel_streams.h"
+#include "kernel_threads.h"
 /*testgittest*/
 
 /* 
@@ -188,14 +189,44 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     the initialization of the PCB.
    */
   if(call != NULL) {
-
+    /** Create atcb */
     newproc->main_thread = spawn_thread(newproc, start_main_thread);
-    ptcb = CreateThread(call, args, argl); 
-    newproc->main_thread ->ptcb = ptcb;
-    wakeup(newproc->main_thread);
-   
     
+    /** Create a ptcb createThread subset */
+    /** Acquire ptcb(malloc?) and itialize it */
+    PTCB* ptcb = (PTCB*)xmalloc(sizeof(PTCB));
+  
+    /**Inialize ptcb */
+    ptcb->task = call;
+    ptcb->argl = argl;
+    if(args!=NULL) {
+    ptcb->args = malloc(argl);
+    memcpy(ptcb->args, args, argl);
+    }
+    else{
+    ptcb->args=NULL;
+    }
+  
 
+    ptcb->exited = 0;
+    ptcb->detached = 0;
+    ptcb->refcount = 0;
+    ptcb->exit_cv = COND_INIT;
+    ptcb->exitval= newproc->exitval;
+    rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
+
+  
+    
+    
+    /** make tcb-ptcb-pcb connection */
+    ptcb->tcb = newproc->main_thread;
+    newproc->main_thread->ptcb = ptcb;
+    rlist_push_back(& newproc->ptcb_list, node);
+    newproc->thread_count++;
+    ptcb->refcount = 1;
+
+
+    wakeup(newproc->main_thread);
   }
 
 
