@@ -38,34 +38,39 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
   ptcb->task = task;
   ptcb->argl = argl;
-  ptcb->args= args;
+    if(args!=NULL) {
+    ptcb->args = malloc(argl);
+    memcpy(ptcb->args, args, argl);
+  }
+  else{
+    ptcb->args=NULL;
+  }
   
 
   ptcb->exited = 0;
   ptcb->detached = 0;
   ptcb->refcount = 0;
   ptcb->exit_cv = COND_INIT;
-
+  ptcb->exitval=CURPROC->exitval;
+  rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
 
   
 
   if(task != NULL){
     /** Initialize a new tcb
      and make connection with ptcb*/
-
     ptcb->tcb = spawn_thread(CURPROC, start_thread);
     ptcb->tcb->ptcb = ptcb;
     
-    /** pcb - ptcb connection (add ptcb to pcb's list)
-     */
-    rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
+    /** pcb - ptcb connection (add ptcb to pcb's list)*/
     rlist_push_back(& CURPROC->ptcb_list, node);
-    pcb->thread_count++;
+    CURPROC->thread_count++;
     ptcb->refcount = 1;
     /** Wake up tcb (add to sched) */
-    wakeup(ptcb->tcb);
-    return (Tid_t) ptcb;
+    wakeup(ptcb->tcb); 
 
+
+    return (Tid_t) ptcb;
 }
 
 

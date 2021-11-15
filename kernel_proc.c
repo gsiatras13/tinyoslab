@@ -76,13 +76,7 @@ void initialize_processes()
 }
 
 
-/* Add a ptcb to pcb's ptcb list */
-void add_ptcb(PCB* pcb, PTCB* ptcb){
 
-rlist_push_front(& pcb->ptcb_list,& ptcb);
-pcb->thread_count ++;
-
-}
 
 
 /*
@@ -143,12 +137,10 @@ void start_main_thread()
 Pid_t sys_Exec(Task call, int argl, void* args)
 {
   PCB *curproc, *newproc;
-<<<<<<< HEAD
-  PTCB* ptcb;
-=======
+
   PTCB *ptcb;	
 	
->>>>>>> b3fb0920b1b7a91b260f16a85d09317a9bdde83c
+
   
   /* The new process PCB */
   newproc = acquire_PCB();
@@ -197,9 +189,11 @@ Pid_t sys_Exec(Task call, int argl, void* args)
    */
   if(call != NULL) {
 
-    newproc->main_thread = spawn_thread(newproc, NULL, start_main_thread);
-    ptcb = CreateThread(call, args, argl);
-    add_ptcb(newproc, ptcb);
+    newproc->main_thread = spawn_thread(newproc, start_main_thread);
+    ptcb = CreateThread(call, args, argl); 
+    newproc->main_thread ->ptcb = ptcb;
+    wakeup(newproc->main_thread);
+   
     
 
   }
