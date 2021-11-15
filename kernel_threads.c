@@ -225,13 +225,13 @@ void sys_ThreadExit(int exitval)
   
 
   /** check if last thread */
-  if(CURPROC->thread_count == 0){
+  if(curproc->thread_count == 0){
   
 
   /* First, store the exit status */
-  curproc->exitval = exitval;
+  
 
-
+  if(get_pid(curproc)!=1){
   /* Reparent any children of the exiting process to the 
       initial task */
   PCB* initpcb = get_pcb(1);
@@ -251,12 +251,12 @@ void sys_ThreadExit(int exitval)
   /* Put me into my parent's exited list */
   rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
   kernel_broadcast(& curproc->parent->child_exit);
-
+  }
   
 
   assert(is_rlist_empty(& curproc->children_list));
   assert(is_rlist_empty(& curproc->exited_list));
-
+  
 
   /* 
     Do all the other cleanup we want here, close files etc. 

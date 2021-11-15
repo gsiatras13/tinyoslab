@@ -338,7 +338,7 @@ void sys_Exit(int exitval)
   /* First, store the exit status */
   curproc->exitval = exitval;
   
-  if(get_pid(curproc)==0) {
+  if(get_pid(curproc)==1) {
 
     while(sys_WaitChild(NOPROC,NULL)!=NOPROC);
 
