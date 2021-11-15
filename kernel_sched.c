@@ -150,7 +150,7 @@ static void thread_start()
   Initialize and return a new TCB
 */
 
-TCB* spawn_thread(PCB* pcb,PTCB* ptcb, void (*func)())
+TCB* spawn_thread(PCB* pcb, void (*func)())
 {
 	/* The allocated thread size must be a multiple of page size */
 	TCB* tcb = (TCB*)allocate_thread(THREAD_SIZE);
@@ -158,7 +158,7 @@ TCB* spawn_thread(PCB* pcb,PTCB* ptcb, void (*func)())
 	/* Set the owner */
 	tcb->owner_pcb = pcb;
 	/* Set the ptcb between pcb and tcb */
-	tcb->ptcb = ptcb;
+	
 	
 
 	/* Initialize the other attributes */

@@ -31,55 +31,45 @@ void start_thread(){
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
 
-  PCB* pcb;
-
+  /** Acquire ptcb(malloc?) and itialize it */
+  PTCB* ptcb = (PTCB*)xmalloc(sizeof(PTCB));
   
 
 
-   
-
-  /** Acquire ptcb(malloc?) and connections */
-  PTCB* ptcb = (PTCB*)xmalloc(sizeof(PTCB));
-  rlnode_init(&ptcb->ptcb_list_node, ptcb); 
-
-  /* Set the main thread's function */
   ptcb->task = task;
-  /* Copy the arguments to new storage, owned by the new process */
   ptcb->argl = argl;
-  if(args!=NULL) {
-    ptcb->args = malloc(argl);
-    memcpy(ptcb->args, args, argl);
-  }
-  else{
-    ptcb->args=NULL;
-  }
+  ptcb->args= args;
+  
 
   ptcb->exited = 0;
   ptcb->detached = 0;
-
+  ptcb->refcount = 0;
   ptcb->exit_cv = COND_INIT;
 
 
   
 
   if(task != NULL){
-    /** Initialize a new tcb*/
+    /** Initialize a new tcb
+     and make connection with ptcb*/
 
-        ptcb->tcb = spawn_thread(CURPROC, ptcb, start_thread);
-    /* PCB* pcb = ptcb->tcb->owner_pcb;
-       rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
-       rlist_push_front(& pcb->ptcb_list, node);
-       ptcb->refcount++;
-       pcb->thread_count++;
-    */s
+    ptcb->tcb = spawn_thread(CURPROC, start_thread);
+    ptcb->tcb->ptcb = ptcb;
+    
+    /** pcb - ptcb connection (add ptcb to pcb's list)
+     */
+    rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
+    rlist_push_back(& CURPROC->ptcb_list, node);
+    pcb->thread_count++;
     ptcb->refcount = 1;
     /** Wake up tcb (add to sched) */
     wakeup(ptcb->tcb);
+    return (Tid_t) ptcb;
 
 }
 
 
-	return ptcb;
+	else return NOTHREAD;
 }
 
 
@@ -87,7 +77,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
 
 
->>>>>>> b3fb0920b1b7a91b260f16a85d09317a9bdde83c
+
 
 /**
   @brief Return the Tid of the current thread.
