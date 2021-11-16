@@ -139,12 +139,31 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   while(ptcb->exited != 1 && ptcb->detached != 1){
     kernel_wait(& ptcb->exit_cv,SCHED_USER);
   }
-
   ptcb->refcount--;
 
-  if(ptcb->detached ==1){
+
+  if(ptcb->detached == 1){
     goto finishError;
   }
+
+
+
+
+  if(ptcb->exited ==1){
+   if(exitval != NULL){
+      *exitval = ptcb->exitval;
+    }   
+  }
+
+
+
+  if(ptcb->refcount == 0){
+      rlist_remove(& ptcb->ptcb_list_node);
+      free(ptcb);
+    }
+
+
+  
 
   goto finishNormal;
   
@@ -154,14 +173,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 
 
   finishNormal:
-    if(exitval != NULL){
-      exitval = &ptcb->exitval;
-    }
-    if(ptcb->refcount == 0){
-      rlist_remove(& ptcb->ptcb_list_node);
-      free(ptcb);
-    }
-
     return 0;  
   
 
