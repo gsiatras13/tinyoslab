@@ -222,7 +222,7 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     newproc->main_thread->ptcb = ptcb;
     rlist_push_back(& newproc->ptcb_list, node);
     newproc->thread_count++;
-    ptcb->refcount = 1;
+    
 
 
     wakeup(newproc->main_thread);

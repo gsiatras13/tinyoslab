@@ -192,7 +192,6 @@ int sys_ThreadDetach(Tid_t tid)
 
   ptcb->detached = 1;
   kernel_broadcast(& ptcb->exit_cv);
-  ptcb->refcount = 0;
   goto finishNormal;
 
 
@@ -217,7 +216,7 @@ void sys_ThreadExit(int exitval)
   PTCB *current_thread = CURTHREAD->ptcb;
   
    /** after check for last thread terminate ptcb also */
-  curproc->main_thread--;
+  curproc->thread_count--;
   current_thread->exited = 1;
   current_thread->exitval = exitval;
   kernel_broadcast(& current_thread->exit_cv);
