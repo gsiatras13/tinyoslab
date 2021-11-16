@@ -91,7 +91,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
  */
 Tid_t sys_ThreadSelf()
 {
-	return (Tid_t) cur_thread()->ptcb;
+	return (Tid_t) CURTHREAD->ptcb;
 }
 
 
@@ -104,9 +104,9 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   PTCB* ptcb = (PTCB*)tid;
   /** @brief Checks */
   /** 
-  @brief Check if joinable
+  @brief Check if T2 belongs to the same PCB
   */
-  if (ptcb->detached == 1){
+  if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
     goto finishError;
   }
 
@@ -118,12 +118,11 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
 
   /** 
-  @brief Check if T2 belongs to the same PCB
+  @brief Check if joinable
   */
-  if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
+  if (ptcb->detached == 1){
     goto finishError;
   }
-
 
   /** 
   @brief Check if it is exited
@@ -142,7 +141,8 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
 
   ptcb->refcount--;
-  if(ptcb->exited == 1 || ptcb->detached ==1){
+
+  if(ptcb->detached ==1){
     goto finishError;
   }
 
@@ -154,8 +154,14 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 
 
   finishNormal:
-    rlist_remove(& ptcb->ptcb_list_node);
-    free(ptcb);
+    if(exitval != NULL){
+      exitval = &ptcb->exitval;
+    }
+    if(ptcb->refcount == 0){
+      rlist_remove(& ptcb->ptcb_list_node);
+      free(ptcb);
+    }
+
     return 0;  
   
 
@@ -176,6 +182,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 int sys_ThreadDetach(Tid_t tid)
 {
   PTCB* ptcb = (PTCB*)tid;
+
    /** 
   @brief Check if thread belongs to pcb
   */
@@ -190,13 +197,15 @@ int sys_ThreadDetach(Tid_t tid)
     goto finishError;
   }
 
-  ptcb->detached = 1;
-  kernel_broadcast(& ptcb->exit_cv);
+
   goto finishNormal;
 
 
 
 	finishNormal:
+    ptcb->detached = 1;
+    kernel_broadcast(& ptcb->exit_cv);
+    ptcb->refcount = 0;
     return 0;  
   
 
