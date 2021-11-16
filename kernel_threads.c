@@ -41,13 +41,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   ptcb->task = task;
   ptcb->argl = argl;
   ptcb->args =  args;
-   /* if(args!=NULL) {
-    ptcb->args = malloc(argl);
-    memcpy(ptcb->args, args, argl);
-  }
-  else{
-    ptcb->args=NULL;
-  }*/
+
   
 
   ptcb->exited = 0;
@@ -103,6 +97,7 @@ Tid_t sys_ThreadSelf()
 int sys_ThreadJoin(Tid_t tid, int* exitval)
 {
   PTCB* ptcb = (PTCB*)tid;
+
   /** @brief Checks */
   /** 
   @brief Check if it joins itself
@@ -118,6 +113,15 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
     goto finishError;
   }
+  /** 
+  @brief Check if detached
+  */
+  if (ptcb->detached == 1){
+    
+    goto finishError;
+  }
+
+
  
 
   
@@ -132,6 +136,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   ptcb->refcount--;
 
 
+  
   if(ptcb->detached == 1){
     goto finishError;
   }
@@ -163,6 +168,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 
 
   finishNormal:
+  ptcb->detached = 1;
     return 0;  
   
 
@@ -205,7 +211,6 @@ int sys_ThreadDetach(Tid_t tid)
 
 	finishNormal:
     ptcb->detached = 1;
-
     kernel_broadcast(& ptcb->exit_cv);
     return 0;  
   
