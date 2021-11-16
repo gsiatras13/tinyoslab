@@ -109,7 +109,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
     goto finishError;
   }
-
   /** 
   @brief Check if it joins itself
   */
@@ -117,20 +116,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     goto finishError;
   }
 
-  /** 
-  @brief Check if joinable
-  */
-  if (ptcb->detached == 1){
-    goto finishError;
-  }
-
-  /** 
-  @brief Check if it is exited
-  */
-  if(ptcb->exited == 1){
-    goto finishError;
-  }
-
+  
 
   /** 
   @brief After the checks
@@ -156,7 +142,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
 
 
-
+/** Ptcb is exited if noone waits remove*/
   if(ptcb->refcount == 0){
       rlist_remove(& ptcb->ptcb_list_node);
       free(ptcb);
@@ -215,8 +201,8 @@ int sys_ThreadDetach(Tid_t tid)
 
 	finishNormal:
     ptcb->detached = 1;
-    kernel_broadcast(& ptcb->exit_cv);
     ptcb->refcount = 0;
+    kernel_broadcast(& ptcb->exit_cv);
     return 0;  
   
 
@@ -301,6 +287,10 @@ void sys_ThreadExit(int exitval)
   /* Now, mark the process as exited. */
   curproc->pstate = ZOMBIE;
   
+}
+  if(current_thread->refcount == 0){
+  rlist_remove(& current_thread->ptcb_list_node);
+  free(current_thread);
 }
   
 
