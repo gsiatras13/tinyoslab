@@ -205,7 +205,6 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     else{
     ptcb->args=NULL;
     }
-  
 
     ptcb->exited = 0;
     ptcb->detached = 0;
@@ -215,15 +214,14 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
 
   
-    
-    
     /** make tcb-ptcb-pcb connection */
     ptcb->tcb = newproc->main_thread;
+    ptcb->refcount = 1;
+
+
     newproc->main_thread->ptcb = ptcb;
     rlist_push_back(& newproc->ptcb_list, node);
     newproc->thread_count++;
-    
-
 
     wakeup(newproc->main_thread);
   }

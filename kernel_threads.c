@@ -40,13 +40,14 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
   ptcb->task = task;
   ptcb->argl = argl;
-    if(args!=NULL) {
+  ptcb->args =  args;
+   /* if(args!=NULL) {
     ptcb->args = malloc(argl);
     memcpy(ptcb->args, args, argl);
   }
   else{
     ptcb->args=NULL;
-  }
+  }*/
   
 
   ptcb->exited = 0;
@@ -104,17 +105,20 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   PTCB* ptcb = (PTCB*)tid;
   /** @brief Checks */
   /** 
-  @brief Check if T2 belongs to the same PCB
-  */
-  if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
-    goto finishError;
-  }
-  /** 
   @brief Check if it joins itself
   */
   if(tid == (Tid_t) CURTHREAD->ptcb){
     goto finishError;
   }
+
+  /** 
+  @brief Check if T2 belongs to the same PCB
+  */
+  //assert(ptcb != NULL);
+  if(rlist_find(& CURPROC->ptcb_list, ptcb, NULL) == NULL){
+    goto finishError;
+  }
+ 
 
   
 
@@ -150,7 +154,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 
 
   
-
+  /**assert(1==2);*/
   goto finishNormal;
   
     
@@ -201,7 +205,7 @@ int sys_ThreadDetach(Tid_t tid)
 
 	finishNormal:
     ptcb->detached = 1;
-    ptcb->refcount = 0;
+
     kernel_broadcast(& ptcb->exit_cv);
     return 0;  
   
