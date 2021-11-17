@@ -22,8 +22,8 @@
 CCB cctx[MAX_CORES];
 
 /* Number of priority queues */
-#define PRIORITY_QUEUES 4 
-#define MAX_YIELDS 10
+#define PRIORITY_QUEUES 10
+#define MAX_YIELDS 2000
 int ycount;
 
 /* 
@@ -171,7 +171,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->phase = CTX_CLEAN;
 	tcb->thread_func = func;
 	tcb->wakeup_time = NO_TIMEOUT;
-	tcb->prio = 2;
+	tcb->prio = PRIORITY_QUEUES/2;
 	rlnode_init(&tcb->sched_node, tcb); /* Intrusive list node */
 
 	tcb->its = QUANTUM;
@@ -233,7 +233,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED[4]; /* The scheduler queue */
+rlnode SCHED[PRIORITY_QUEUES]; /* The scheduler queue */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -344,9 +344,10 @@ static TCB* sched_queue_select(TCB* current)
 			}	
 		}
 	}
-  
+  fprintf(stderr, "%d",firstlist);
 	/* Get the head of the SCHED list */
 	rlnode* sel = rlist_pop_front(&SCHED[firstlist]);
+	assert(sel != NULL);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
@@ -421,11 +422,11 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 }
 
  void priority_boost(){
-  	for (int j = 0; j< PRIORITY_QUEUES-1; j++){
+  	for (int j = PRIORITY_QUEUES-1; j>0; j--){
   		while(!is_rlist_empty(&SCHED[j])){
   			rlnode* firstnode = rlist_pop_front(&SCHED[j]);
-  			firstnode->tcb->prio++;
-  			rlist_push_front(&SCHED[j+1], firstnode);
+  			firstnode->tcb->prio--;
+  			rlist_push_back(&SCHED[j-1], firstnode);
   		}
 
   	}
@@ -487,19 +488,19 @@ void yield(enum SCHED_CAUSE cause)
 	/**adjust priority */
 	switch(cause){
 		case SCHED_QUANTUM:
-		  if (current->prio > 0) {
-		  	current->prio--;
+		  if (current->prio < PRIORITY_QUEUES-1) {
+		  	current->prio++;
 		  }
 		  break;
 		case SCHED_IO:
-		  if(current->prio < PRIORITY_QUEUES-1) {
-		  	current->prio++;
+		  if(current->prio > 0) {
+		  	current->prio = 0;
 		  } 
 		  break;
 		case SCHED_MUTEX:
 		  if(current->last_cause == current->curr_cause){
-		  	if (current->prio > 0){
-		  		current->prio--;
+		  	if (current->prio < PRIORITY_QUEUES-1){
+		  		current->prio++;
 		  	}
 		  }
 		  break;
