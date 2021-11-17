@@ -21,6 +21,10 @@
 /* Core control blocks */
 CCB cctx[MAX_CORES];
 
+/* Number of priority queues */
+#define PRIORITY_QUEUES 4 
+#define MAX_YIELDS 10
+int ycount;
 
 /* 
 	The current core's CCB. This must only be used in a 
@@ -167,6 +171,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->phase = CTX_CLEAN;
 	tcb->thread_func = func;
 	tcb->wakeup_time = NO_TIMEOUT;
+	tcb->prio = 2;
 	rlnode_init(&tcb->sched_node, tcb); /* Intrusive list node */
 
 	tcb->its = QUANTUM;
@@ -228,7 +233,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED; /* The scheduler queue */
+rlnode SCHED[4]; /* The scheduler queue */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -271,7 +276,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+	rlist_push_back(&SCHED[tcb->prio], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -329,8 +334,19 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
+	
+	int firstlist= PRIORITY_QUEUES-1;
+	for(int lprio = PRIORITY_QUEUES-1; lprio>=0; lprio--){
+		/**check if list is empty (if not break and use this list) */
+		if (!is_rlist_empty(&SCHED[lprio])){
+			if(lprio < firstlist){
+				firstlist = lprio;
+			}	
+		}
+	}
+  
 	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+	rlnode* sel = rlist_pop_front(&SCHED[firstlist]);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
@@ -404,10 +420,23 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 		preempt_on;
 }
 
+ void priority_boost(){
+  	for (int j = 0; j< PRIORITY_QUEUES-1; j++){
+  		while(!is_rlist_empty(&SCHED[j])){
+  			rlnode* firstnode = rlist_pop_front(&SCHED[j]);
+  			firstnode->tcb->prio++;
+  			rlist_push_front(&SCHED[j+1], firstnode);
+  		}
+
+  	}
+
+  }
+
 /* This function is the entry point to the scheduler's context switching */
 
 void yield(enum SCHED_CAUSE cause)
 {
+   ycount++;
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
 
@@ -426,9 +455,16 @@ void yield(enum SCHED_CAUSE cause)
 	current->rts = remaining;
 	current->last_cause = current->curr_cause;
 	current->curr_cause = cause;
-
+  
+  
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
+
+
+	if(ycount >= MAX_YIELDS){
+		priority_boost();
+		ycount = 0;
+	}
 
 	/* Get next */
 	TCB* next = sched_queue_select(current);
@@ -439,17 +475,48 @@ void yield(enum SCHED_CAUSE cause)
 
 	Mutex_Unlock(&sched_spinlock);
 
+
+	
+
 	/* Switch contexts */
 	if (current != next) {
 		CURTHREAD = next;
 		cpu_swap_context(&current->context, &next->context);
 	}
 
+	/**adjust priority */
+	switch(cause){
+		case SCHED_QUANTUM:
+		  if (current->prio > 0) {
+		  	current->prio--;
+		  }
+		  break;
+		case SCHED_IO:
+		  if(current->prio < PRIORITY_QUEUES-1) {
+		  	current->prio++;
+		  } 
+		  break;
+		case SCHED_MUTEX:
+		  if(current->last_cause == current->curr_cause){
+		  	if (current->prio > 0){
+		  		current->prio--;
+		  	}
+		  }
+		  break;
+		default:
+		  current->prio = current->prio;    
+	}
+
+
 	/* This is where we get after we are switched back on! A long time
 	   may have passed. Start a new timeslice...
 	  */
 	gain(preempt);
 }
+
+
+
+ 
 
 /*
   This function must be called at the beginning of each new timeslice.
@@ -524,8 +591,13 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
+	for(int in=0; in<=PRIORITY_QUEUES-1; in++){
+	  rlnode_init(&SCHED[in], NULL);
+  }
+  
 	rlnode_init(&TIMEOUT_LIST, NULL);
+
+	ycount=0;
 }
 
 void run_scheduler()
@@ -542,6 +614,7 @@ void run_scheduler()
 	curcore->idle_thread.state = RUNNING;
 	curcore->idle_thread.phase = CTX_DIRTY;
 	curcore->idle_thread.wakeup_time = NO_TIMEOUT;
+	curcore->idle_thread.prio = PRIORITY_QUEUES -1;
 	rlnode_init(&curcore->idle_thread.sched_node, &curcore->idle_thread);
 
 	curcore->idle_thread.its = QUANTUM;
