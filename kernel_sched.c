@@ -171,7 +171,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->phase = CTX_CLEAN;
 	tcb->thread_func = func;
 	tcb->wakeup_time = NO_TIMEOUT;
-	tcb->prio = 2;
+	tcb->prio = 3;
 	rlnode_init(&tcb->sched_node, tcb); /* Intrusive list node */
 
 	tcb->its = QUANTUM;
@@ -335,26 +335,34 @@ static void sched_wakeup_expired_timeouts()
 static TCB* sched_queue_select(TCB* current)
 {
 	
-	int firstlist= PRIORITY_QUEUES-1;
-	for(int lprio = PRIORITY_QUEUES-1; lprio>=0; lprio--){
+	int firstlist = -1;
+	for(int lprio = 0; lprio <= PRIORITY_QUEUES-1; lprio++){
 		/**check if list is empty (if not break and use this list) */
 		if (!is_rlist_empty(&SCHED[lprio])){
-			if(lprio < firstlist){
+			if(lprio > firstlist){
 				firstlist = lprio;
 			}	
 		}
 	}
-  
+	/*assert(firstlist != -1);
+	assert(firstlist != 0);
+	assert(firstlist != 1);
+	assert(firstlist != 2);
+	assert(firstlist != 3);*/
+  if(firstlist == -1){
+  	goto nulloccasion;
+  }
 	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED[firstlist]);
+	rlnode* sel = rlist_pop_front(&SCHED[2]);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
+  nulloccasion:
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
 	next_thread->its = QUANTUM;
-
+  //assert(1==2);
 	return next_thread;
 }
 
@@ -426,6 +434,7 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
   			rlnode* firstnode = rlist_pop_front(&SCHED[j]);
   			firstnode->tcb->prio++;
   			rlist_push_front(&SCHED[j+1], firstnode);
+  			assert(1==4);
   		}
 
   	}
@@ -462,6 +471,7 @@ void yield(enum SCHED_CAUSE cause)
 
 
 	if(ycount >= MAX_YIELDS){
+		assert(1==4);
 		priority_boost();
 		ycount = 0;
 	}
@@ -477,13 +487,14 @@ void yield(enum SCHED_CAUSE cause)
 
 
 	
-
+  
 	/* Switch contexts */
 	if (current != next) {
 		CURTHREAD = next;
 		cpu_swap_context(&current->context, &next->context);
+		
 	}
-
+  
 	/**adjust priority */
 	switch(cause){
 		case SCHED_QUANTUM:
@@ -497,17 +508,21 @@ void yield(enum SCHED_CAUSE cause)
 		  } 
 		  break;
 		case SCHED_MUTEX:
-		  if(current->last_cause == current->curr_cause){
+		  //if(current->last_cause == current->curr_cause){
 		  	if (current->prio > 0){
 		  		current->prio--;
 		  	}
-		  }
+		  //}
 		  break;
 		default:
-		  current->prio = current->prio;    
+		  current->prio = current->prio;  
+		  assert(current->prio != 0);  
+		  assert(current->prio != 1);
+		  assert(current->prio != 2);
+		  assert(current->prio != 3);
 	}
 
-
+  //assert(1==6);
 	/* This is where we get after we are switched back on! A long time
 	   may have passed. Start a new timeslice...
 	  */
@@ -614,7 +629,7 @@ void run_scheduler()
 	curcore->idle_thread.state = RUNNING;
 	curcore->idle_thread.phase = CTX_DIRTY;
 	curcore->idle_thread.wakeup_time = NO_TIMEOUT;
-	curcore->idle_thread.prio = PRIORITY_QUEUES -1;
+	
 	rlnode_init(&curcore->idle_thread.sched_node, &curcore->idle_thread);
 
 	curcore->idle_thread.its = QUANTUM;
