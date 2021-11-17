@@ -141,7 +141,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     goto finishError;
   }
 
-fdsf
+
 
 
   if(ptcb->exited ==1){
