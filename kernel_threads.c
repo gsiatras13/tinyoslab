@@ -218,7 +218,7 @@ int sys_ThreadDetach(Tid_t tid)
   finishError:
     return -1;
 }
-aa
+
 
 
 /**
