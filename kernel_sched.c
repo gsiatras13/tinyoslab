@@ -22,7 +22,7 @@
 CCB cctx[MAX_CORES];
 
 /* Number of priority queues */
-#define PRIORITY_QUEUES 10
+#define PRIORITY_QUEUES 10 /*the lowest queue the best priority*/
 #define MAX_YIELDS 2000
 int ycount;
 
@@ -334,7 +334,7 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	
+	/** choose lowest list*/
 	int firstlist= PRIORITY_QUEUES-1;
 	for(int lprio = PRIORITY_QUEUES-1; lprio>=0; lprio--){
 		/**check if list is empty (if not break and use this list) */
@@ -344,10 +344,10 @@ static TCB* sched_queue_select(TCB* current)
 			}	
 		}
 	}
-  fprintf(stderr, "%d",firstlist);
+  //fprintf(stderr, "%d",firstlist);
 	/* Get the head of the SCHED list */
 	rlnode* sel = rlist_pop_front(&SCHED[firstlist]);
-	assert(sel != NULL);
+	//assert(sel != NULL);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
@@ -421,11 +421,16 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 		preempt_on;
 }
 
+/* This function boosts the priority of low priority threads */
  void priority_boost(){
+ 	/** surpass through all priority queues*/
   	for (int j = PRIORITY_QUEUES-1; j>0; j--){
+  		/** get all the threads of the queue */
   		while(!is_rlist_empty(&SCHED[j])){
+  			/** get the first node */
   			rlnode* firstnode = rlist_pop_front(&SCHED[j]);
   			firstnode->tcb->prio--;
+  			/* put in the last place of the next queue */
   			rlist_push_back(&SCHED[j-1], firstnode);
   		}
 
@@ -461,7 +466,7 @@ void yield(enum SCHED_CAUSE cause)
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 
-
+  /**boost priorities after certain amount of yields*/
 	if(ycount >= MAX_YIELDS){
 		priority_boost();
 		ycount = 0;
@@ -592,6 +597,7 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
+	/** initialise priotity queues */
 	for(int in=0; in<=PRIORITY_QUEUES-1; in++){
 	  rlnode_init(&SCHED[in], NULL);
   }

@@ -33,16 +33,12 @@ void start_thread(){
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
 
-  /** Acquire ptcb(malloc?) and itialize it */
+  /** Acquire ptcb(malloc?) and initialise it */
   PTCB* ptcb = (PTCB*)xmalloc(sizeof(PTCB));
   
-
-
   ptcb->task = task;
   ptcb->argl = argl;
   ptcb->args =  args;
-
-  
 
   ptcb->exited = 0;
   ptcb->detached = 0;
@@ -52,17 +48,15 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   rlnode* node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
 
   
-
   if(task != NULL){
-    /** Initialize a new tcb
-     and make connection with ptcb*/
+    /** Make connections with pcb and tcb*/
+    /** Create a tcb */
     ptcb->tcb = spawn_thread(CURPROC, start_thread);
     ptcb->tcb->ptcb = ptcb;
-    
-    /** pcb - ptcb connection (add ptcb to pcb's list)*/
+    ptcb->refcount = 1;
     rlist_push_back(& CURPROC->ptcb_list, node);
     CURPROC->thread_count++;
-    ptcb->refcount = 1;
+    
     /** Wake up tcb (add to sched) */
     wakeup(ptcb->tcb); 
 
@@ -122,10 +116,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
 
 
- 
-
-  
-
   /** 
   @brief After the checks
   */
@@ -142,8 +132,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
 
 
-
-
   if(ptcb->exited ==1){
    if(exitval != NULL){
       *exitval = ptcb->exitval;
@@ -158,16 +146,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     }
 
 
-  
-  /**assert(1==2);*/
-  goto finishNormal;
-  
-    
-  
-
-
-
-  finishNormal:
+  /** Normal finish */
   ptcb->detached = 1;
     return 0;  
   
@@ -205,14 +184,10 @@ int sys_ThreadDetach(Tid_t tid)
   }
 
 
-  goto finishNormal;
-
-
-
-	finishNormal:
-    ptcb->detached = 1;
-    kernel_broadcast(& ptcb->exit_cv);
-    return 0;  
+  /** Normal finish */
+  ptcb->detached = 1;
+  kernel_broadcast(& ptcb->exit_cv);
+  return 0;  
   
 
   finishError:
@@ -230,7 +205,7 @@ void sys_ThreadExit(int exitval)
   PCB *curproc = CURPROC;  /* cache for efficiency */
   PTCB *current_thread = CURTHREAD->ptcb;
   
-   /** after check for last thread terminate ptcb also */
+   /**  terminate ptcb */
   curproc->thread_count--;
   current_thread->exited = 1;
   current_thread->exitval = exitval;
@@ -243,8 +218,6 @@ void sys_ThreadExit(int exitval)
   
 
   /* First, store the exit status */
-  
-
   if(get_pid(curproc)!=1){
   /* Reparent any children of the exiting process to the 
       initial task */
